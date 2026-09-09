@@ -1,0 +1,2470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Forensic OPG Gonial Angle Analyzer</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:#eef1f5;
+    color:#17202a;
+}
+
+header{
+    background:#17202a;
+    color:white;
+    padding:18px;
+    text-align:center;
+}
+
+header h1{
+    margin:0;
+    font-size:25px;
+}
+
+header p{
+    margin:7px 0 0;
+    color:#ccd6dd;
+}
+
+.container{
+    max-width:1450px;
+    margin:auto;
+    padding:15px;
+}
+
+.toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    background:white;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 2px 8px #0002;
+    margin-bottom:15px;
+}
+
+button,
+input[type=file]{
+    padding:9px 12px;
+    border:1px solid #aaa;
+    border-radius:6px;
+    background:white;
+    cursor:pointer;
+    font-size:14px;
+}
+
+button:hover{
+    background:#edf2f5;
+}
+
+.viewer{
+    background:#111;
+    border-radius:10px;
+    overflow:hidden;
+    position:relative;
+    min-height:500px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+canvas{
+    background:#111;
+    max-width:100%;
+    max-height:75vh;
+    cursor:crosshair;
+    touch-action:none;
+}
+
+.instructions{
+    background:#fff;
+    padding:15px;
+    margin-top:15px;
+    border-radius:10px;
+    box-shadow:0 2px 8px #0002;
+}
+
+.instructions h3{
+    margin-top:0;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:15px;
+    margin-top:15px;
+}
+
+.card{
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 2px 8px #0002;
+}
+
+.card h2{
+    margin-top:0;
+}
+
+.angle{
+    font-size:30px;
+    font-weight:bold;
+    margin:10px 0;
+}
+
+.status{
+    padding:9px;
+    border-radius:6px;
+    background:#f0f3f5;
+    margin-bottom:10px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th,td{
+    border:1px solid #ccc;
+    padding:8px;
+    text-align:center;
+}
+
+th{
+    background:#e9edf0;
+}
+
+.report{
+    margin-top:15px;
+    background:white;
+    padding:22px;
+    border-radius:10px;
+    box-shadow:0 2px 8px #0002;
+}
+
+.report h2{
+    border-bottom:2px solid #333;
+    padding-bottom:7px;
+}
+
+.report h3{
+    margin-bottom:6px;
+}
+
+.warning{
+    background:#fff3cd;
+    border-left:5px solid #d39e00;
+    padding:12px;
+    margin-top:12px;
+}
+
+.info{
+    background:#e8f4ff;
+    border-left:5px solid #2584c7;
+    padding:12px;
+    margin-top:12px;
+}
+
+.probability-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:15px;
+}
+
+.probability-box{
+    border:1px solid #ccc;
+    padding:15px;
+    border-radius:8px;
+}
+
+.probability{
+    font-size:25px;
+    font-weight:bold;
+}
+
+.confidence-low{
+    display:inline-block;
+    padding:5px 9px;
+    border-radius:5px;
+    background:#fff3cd;
+}
+
+.small{
+    font-size:13px;
+    color:#555;
+}
+
+#placeholder{
+    position:absolute;
+    color:#aaa;
+    text-align:center;
+    pointer-events:none;
+}
+
+@media(max-width:800px){
+
+    .grid,
+    .probability-grid{
+        grid-template-columns:1fr;
+    }
+
+}
+
+@media print{
+
+    body{
+        background:white;
+    }
+
+    header,
+    .toolbar,
+    .viewer,
+    .instructions,
+    .grid{
+        display:none !important;
+    }
+
+    .report{
+        box-shadow:none;
+        margin:0;
+    }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<header>
+
+<h1>Forensic OPG Gonial Angle Analyzer</h1>
+
+<p>
+Interactive bilateral gonial-angle measurement with forensic interpretation
+</p>
+
+</header>
+
+
+<div class="container">
+
+
+<!-- TOOLBAR -->
+
+<div class="toolbar">
+
+<input
+    type="file"
+    id="imageInput"
+    accept="image/*"
+>
+
+<button onclick="zoomIn()">
+Zoom +
+</button>
+
+<button onclick="zoomOut()">
+Zoom −
+</button>
+
+<button onclick="fitImage()">
+Fit Image
+</button>
+
+<button onclick="clearAll()">
+Clear All
+</button>
+
+<button onclick="window.print()">
+Print / Save Report
+</button>
+
+</div>
+
+
+<!-- VIEWER -->
+
+<div class="viewer">
+
+<canvas id="canvas"></canvas>
+
+<div id="placeholder">
+Upload an OPG to begin
+</div>
+
+</div>
+
+
+<!-- INSTRUCTIONS -->
+
+<div class="instructions">
+
+<h3>Landmark placement and measurement</h3>
+
+<ol>
+
+<li>
+Click <b>Start Right</b> or <b>Start Left</b>.
+</li>
+
+<li>
+Place <b>A</b> on the posterior border of the mandibular ramus.
+</li>
+
+<li>
+Place <b>B</b> at the gonion.
+</li>
+
+<li>
+Place <b>C</b> on the inferior border of the mandibular body.
+</li>
+
+<li>
+After all three points are placed, they can be
+<b>dragged in real time</b> for precise positioning.
+</li>
+
+<li>
+The angle is recalculated continuously while the landmark is moved.
+</li>
+
+<li>
+Click <b>Confirm</b> to lock the measurement.
+</li>
+
+</ol>
+
+<p>
+The calculated angle is ∠ABC.
+</p>
+
+</div>
+
+
+<!-- RIGHT / LEFT -->
+
+<div class="grid">
+
+
+<div class="card">
+
+<h2>Right Gonial Angle</h2>
+
+<div
+    class="status"
+    id="rightStatus"
+>
+Ready to begin
+</div>
+
+<button onclick="startMeasurement('right')">
+Start Right
+</button>
+
+<button onclick="confirmMeasurement('right')">
+Confirm Right
+</button>
+
+<button onclick="clearMeasurement('right')">
+Clear Right
+</button>
+
+<div
+    class="angle"
+    id="rightAngle"
+>
+--
+</div>
+
+</div>
+
+
+<div class="card">
+
+<h2>Left Gonial Angle</h2>
+
+<div
+    class="status"
+    id="leftStatus"
+>
+Ready to begin
+</div>
+
+<button onclick="startMeasurement('left')">
+Start Left
+</button>
+
+<button onclick="confirmMeasurement('left')">
+Confirm Left
+</button>
+
+<button onclick="clearMeasurement('left')">
+Clear Left
+</button>
+
+<div
+    class="angle"
+    id="leftAngle"
+>
+--
+</div>
+
+</div>
+
+
+</div>
+
+
+<!-- MEASUREMENTS -->
+
+<div class="card" style="margin-top:15px">
+
+<h2>Measurements</h2>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Parameter</th>
+<th>Result</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+<td>Right Gonial Angle</td>
+<td id="tableRight">--</td>
+</tr>
+
+<tr>
+<td>Left Gonial Angle</td>
+<td id="tableLeft">--</td>
+</tr>
+
+<tr>
+<td>Mean Bilateral Angle</td>
+<td id="tableMean">--</td>
+</tr>
+
+<tr>
+<td>Right–Left Difference</td>
+<td id="tableDifference">--</td>
+</tr>
+
+</tbody>
+
+</table>
+
+</div>
+
+
+<!-- REPORT -->
+
+<div class="report" id="report">
+
+<h2>
+Forensic Gonial Angle Examination Report
+</h2>
+
+
+<h3>1. Examination Method</h3>
+
+<p>
+Gonial angle measurement was performed on the supplied panoramic
+radiograph using three examiner-selected mandibular landmarks.
+The software calculates the geometric angle between the posterior
+ramus direction and inferior mandibular border.
+</p>
+
+
+<h3>2. Measurements</h3>
+
+<table>
+
+<tr>
+<th>Parameter</th>
+<th>Measurement</th>
+</tr>
+
+<tr>
+<td>Right Gonial Angle</td>
+<td id="reportRight">Not measured</td>
+</tr>
+
+<tr>
+<td>Left Gonial Angle</td>
+<td id="reportLeft">Not measured</td>
+</tr>
+
+<tr>
+<td>Mean Bilateral Angle</td>
+<td id="reportMean">Not available</td>
+</tr>
+
+<tr>
+<td>Right–Left Difference</td>
+<td id="reportDifference">Not available</td>
+</tr>
+
+</table>
+
+
+<h3>3. Anatomical Landmarks</h3>
+
+<ul>
+
+<li>
+<b>Point A:</b> posterior border of the mandibular ramus.
+</li>
+
+<li>
+<b>Point B:</b> gonion, representing the mandibular angle.
+</li>
+
+<li>
+<b>Point C:</b> inferior border of the mandibular body.
+</li>
+
+</ul>
+
+<p>
+The gonial angle is calculated as ∠ABC.
+</p>
+
+
+<h3>4. Forensic Significance</h3>
+
+<p>
+The gonial angle is a morphometric characteristic of mandibular
+architecture that has been investigated in forensic anthropology
+and forensic odontological research.
+</p>
+
+<p>
+Its potential forensic applications include:
+</p>
+
+<ul>
+
+<li>
+<b>Age assessment:</b> Changes in mandibular morphology during adult
+life have been investigated in relation to chronological age.
+The gonial angle may therefore provide supplementary information
+when used with established dental and skeletal age indicators.
+</li>
+
+<li>
+<b>Sex assessment:</b> Gonial angle has been investigated as one of
+several mandibular measurements that may contribute to biological
+sex estimation.
+</li>
+
+<li>
+<b>Human identification:</b> Mandibular morphology may contribute
+to comparative assessment when antemortem and postmortem
+radiographs are available.
+</li>
+
+<li>
+<b>Forensic anthropology:</b> The angle can be incorporated into
+multivariate mandibular morphometric analysis.
+</li>
+
+</ul>
+
+
+<div class="warning">
+
+<b>Important:</b>
+
+Gonial angle should not be used as a standalone determinant of
+age, sex or identity. Its forensic value is greatest when combined
+with other validated dental, skeletal and anthropological parameters.
+
+</div>
+
+
+<!-- PROBABILITY -->
+
+<h3>
+5. Probabilistic Forensic Assessment
+</h3>
+
+
+<div class="probability-grid">
+
+
+<div class="probability-box">
+
+<h3>Sex Estimation</h3>
+
+<p>
+<b>Female probability</b>
+</p>
+
+<div
+    class="probability"
+    id="femaleProbability"
+>
+--
+</div>
+
+<p>
+<b>Male probability</b>
+</p>
+
+<div
+    class="probability"
+    id="maleProbability"
+>
+--
+</div>
+
+<p>
+<b>Model indication:</b>
+<span id="sexPrediction">
+--
+</span>
+</p>
+
+
+<div class="info">
+
+<b>Reference model:</b>
+
+The sex probability is calculated using the published logistic
+regression model:
+
+<br><br>
+
+P(Female) =
+1 / [1 + e<sup>−(4.606 − 0.038 × GA)</sup>]
+
+<br><br>
+
+The original model was developed using Indian subjects aged
+18–30 years using lateral cephalograms. It has not been
+validated specifically for this OPG application.
+
+</div>
+
+</div>
+
+
+<div class="probability-box">
+
+<h3>Age Estimation</h3>
+
+<p>
+<b>Approximate age estimate</b>
+</p>
+
+<div
+    class="probability"
+    id="estimatedAge"
+>
+--
+</div>
+
+<p>
+<b>Approximate uncertainty</b>
+</p>
+
+<div id="ageError">
+--
+</div>
+
+<p>
+<b>Interpretation:</b>
+<span id="ageInterpretation">
+--
+</span>
+</p>
+
+
+<div class="warning">
+
+Gonial-angle age estimation has limited precision. Published
+OPG research has reported substantial individual error,
+approximately ±14 years in one Indian study.
+
+Therefore the age estimate is presented as an
+<b>ancillary research estimate</b>, not as a definitive forensic age.
+
+</div>
+
+</div>
+
+</div>
+
+
+<h3>
+6. Automated Interpretation
+</h3>
+
+<div id="automatedInterpretation">
+
+No complete measurement is currently available.
+
+</div>
+
+
+<h3>
+7. Statistical and Forensic Limitations
+</h3>
+
+<ul>
+
+<li>
+Gonial angle varies between individuals.
+</li>
+
+<li>
+Age, sex, population, dentition and mandibular morphology may
+influence the measurement.
+</li>
+
+<li>
+Patient positioning and panoramic image distortion can influence
+the apparent angle.
+</li>
+
+<li>
+Different observers may select slightly different anatomical
+landmarks.
+</li>
+
+<li>
+The present application performs geometric calculation from
+examiner-selected landmarks. It does not automatically identify
+gonion.
+</li>
+
+<li>
+The sex probability model is population- and modality-specific.
+</li>
+
+<li>
+The age estimate has substantially greater uncertainty than the
+precision displayed by the numerical angle.
+</li>
+
+</ul>
+
+
+<h3>
+8. Forensic Conclusion
+</h3>
+
+<p id="forensicConclusion">
+
+The forensic conclusion will be generated after measurement.
+
+</p>
+
+
+<h3>
+9. Examiner Statement
+</h3>
+
+<p>
+
+The reported gonial-angle measurements are based on landmarks
+selected by the examiner on the supplied panoramic radiograph.
+The software performs geometric calculation and statistical
+reference analysis but does not independently establish the
+anatomical identity of the selected landmarks.
+
+The findings should therefore be interpreted within the complete
+clinical, radiological and forensic context of the individual case.
+
+</p>
+
+
+<h3>
+10. Mathematical Method
+</h3>
+
+<p>
+The angle is calculated from vectors BA and BC:
+</p>
+
+<p style="font-family:monospace">
+
+θ = cos⁻¹[(BA · BC) / (|BA| × |BC|)]
+
+</p>
+
+<p>
+The result is expressed in degrees.
+</p>
+
+
+<p class="small">
+
+Forensic OPG Gonial Angle Analyzer |
+Research / Educational Tool
+
+</p>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* ==========================================================
+   FORENSIC OPG GONIAL ANGLE ANALYZER
+   ========================================================== */
+
+
+/* =========================
+   GLOBAL VARIABLES
+========================= */
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+const placeholder =
+    document.getElementById("placeholder");
+
+
+let image = new Image();
+
+let scale = 1;
+
+let activeSide = null;
+
+let editSide = null;
+
+let draggedPoint = null;
+
+let measurements = {
+
+    right: [],
+    left: []
+
+};
+
+let confirmed = {
+
+    right:false,
+    left:false
+
+};
+
+const labels = ["A","B","C"];
+
+const hitRadius = 18;
+
+
+/* =========================
+   IMAGE UPLOAD
+========================= */
+
+document
+.getElementById("imageInput")
+.addEventListener(
+    "change",
+    function(e){
+
+        const file =
+            e.target.files[0];
+
+        if(!file)
+            return;
+
+        const reader =
+            new FileReader();
+
+        reader.onload =
+            function(event){
+
+                image.onload =
+                    function(){
+
+                        placeholder.style.display =
+                            "none";
+
+                        fitImage();
+
+                    };
+
+                image.src =
+                    event.target.result;
+
+            };
+
+        reader.readAsDataURL(file);
+
+    }
+);
+
+
+/* =========================
+   FIT IMAGE
+========================= */
+
+function fitImage(){
+
+    if(!image.width)
+        return;
+
+    const viewer =
+        canvas.parentElement;
+
+    const maxW =
+        viewer.clientWidth - 20;
+
+    const maxH =
+        window.innerHeight * 0.72;
+
+    scale =
+        Math.min(
+            maxW / image.width,
+            maxH / image.height
+        );
+
+    canvas.width =
+        image.width * scale;
+
+    canvas.height =
+        image.height * scale;
+
+    draw();
+
+}
+
+
+/* =========================
+   ZOOM
+========================= */
+
+function zoomIn(){
+
+    if(!image.width)
+        return;
+
+    scale *= 1.2;
+
+    resizeCanvas();
+
+}
+
+
+function zoomOut(){
+
+    if(!image.width)
+        return;
+
+    scale /= 1.2;
+
+    resizeCanvas();
+
+}
+
+
+function resizeCanvas(){
+
+    canvas.width =
+        image.width * scale;
+
+    canvas.height =
+        image.height * scale;
+
+    draw();
+
+}
+
+
+/* =========================
+   DRAW EVERYTHING
+========================= */
+
+function draw(){
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    if(!image.width)
+        return;
+
+    ctx.drawImage(
+        image,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    drawMeasurement("right");
+
+    drawMeasurement("left");
+
+}
+
+
+/* =========================
+   DRAW MEASUREMENT
+========================= */
+
+function drawMeasurement(side){
+
+    const pts =
+        measurements[side];
+
+    if(!pts || !pts.length)
+        return;
+
+
+    const pointColor =
+        side === "right"
+        ? "#00e5ff"
+        : "#ff4da6";
+
+
+    ctx.lineWidth = 3;
+
+    ctx.strokeStyle =
+        pointColor;
+
+    ctx.fillStyle =
+        pointColor;
+
+
+    /* A-B */
+
+    if(pts.length >= 2){
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            pts[0].x,
+            pts[0].y
+        );
+
+        ctx.lineTo(
+            pts[1].x,
+            pts[1].y
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    /* B-C */
+
+    if(pts.length >= 3){
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            pts[1].x,
+            pts[1].y
+        );
+
+        ctx.lineTo(
+            pts[2].x,
+            pts[2].y
+        );
+
+        ctx.stroke();
+
+    }
+
+
+    /* POINTS */
+
+    pts.forEach(
+        function(p,i){
+
+            ctx.beginPath();
+
+            ctx.arc(
+                p.x,
+                p.y,
+                9,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.fill();
+
+
+            ctx.fillStyle =
+                "#000";
+
+            ctx.font =
+                "bold 13px Arial";
+
+            ctx.fillText(
+                labels[i],
+                p.x - 4,
+                p.y + 5
+            );
+
+
+            ctx.fillStyle =
+                pointColor;
+
+        }
+    );
+
+
+    /* ANGLE ARC */
+
+    if(pts.length === 3){
+
+        const angle =
+            calculateAngle(
+                pts[0],
+                pts[1],
+                pts[2]
+            );
+
+        drawArc(
+            pts[0],
+            pts[1],
+            pts[2],
+            pointColor
+        );
+
+        document
+        .getElementById(
+            side+"Angle"
+        )
+        .textContent =
+            angle.toFixed(2)+"°";
+
+    }
+
+}
+
+
+/* =========================
+   ANGLE
+========================= */
+
+function calculateAngle(A,B,C){
+
+    const BA = {
+
+        x:A.x-B.x,
+        y:A.y-B.y
+
+    };
+
+    const BC = {
+
+        x:C.x-B.x,
+        y:C.y-B.y
+
+    };
+
+
+    const dot =
+        BA.x * BC.x +
+        BA.y * BC.y;
+
+
+    const magBA =
+        Math.sqrt(
+            BA.x*BA.x +
+            BA.y*BA.y
+        );
+
+
+    const magBC =
+        Math.sqrt(
+            BC.x*BC.x +
+            BC.y*BC.y
+        );
+
+
+    if(
+        !magBA ||
+        !magBC
+    )
+        return 0;
+
+
+    let cos =
+        dot /
+        (magBA * magBC);
+
+
+    cos =
+        Math.max(
+            -1,
+            Math.min(1,cos)
+        );
+
+
+    return Math.acos(cos)
+        * 180 / Math.PI;
+
+}
+
+
+/* =========================
+   ARC
+========================= */
+
+function drawArc(A,B,C,color){
+
+    const radius = 38;
+
+    const start =
+        Math.atan2(
+            A.y-B.y,
+            A.x-B.x
+        );
+
+    const end =
+        Math.atan2(
+            C.y-B.y,
+            C.x-B.x
+        );
+
+
+    ctx.strokeStyle =
+        "yellow";
+
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        B.x,
+        B.y,
+        radius,
+        start,
+        end
+    );
+
+    ctx.stroke();
+
+
+    /* Display numerical angle near B */
+
+    const angle =
+        calculateAngle(A,B,C);
+
+
+    ctx.fillStyle =
+        "yellow";
+
+    ctx.font =
+        "bold 15px Arial";
+
+    ctx.fillText(
+        angle.toFixed(1)+"°",
+        B.x + 12,
+        B.y - 12
+    );
+
+}
+
+
+/* =========================
+   START MEASUREMENT
+========================= */
+
+function startMeasurement(side){
+
+    if(confirmed[side]){
+
+        alert(
+            "This measurement is already confirmed. Clear it before starting again."
+        );
+
+        return;
+
+    }
+
+
+    measurements[side] = [];
+
+    activeSide = side;
+
+    editSide = side;
+
+    draggedPoint = null;
+
+
+    document
+    .getElementById(
+        side+"Status"
+    )
+    .textContent =
+        "Place point A on the posterior border of the ramus.";
+
+
+    draw();
+
+}
+
+
+/* =========================
+   CANVAS COORDINATES
+========================= */
+
+function getCanvasCoordinates(e){
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    return {
+
+        x:
+            (e.clientX - rect.left)
+            * canvas.width / rect.width,
+
+        y:
+            (e.clientY - rect.top)
+            * canvas.height / rect.height
+
+    };
+
+}
+
+
+/* =========================
+   CLICK TO PLACE
+========================= */
+
+canvas.addEventListener(
+    "click",
+    function(e){
+
+        if(!activeSide)
+            return;
+
+
+        const pts =
+            measurements[activeSide];
+
+
+        if(pts.length >= 3){
+
+            activeSide = null;
+
+            return;
+
+        }
+
+
+        const p =
+            getCanvasCoordinates(e);
+
+
+        pts.push(p);
+
+
+        const n =
+            pts.length;
+
+
+        if(n === 1){
+
+            document
+            .getElementById(
+                activeSide+"Status"
+            )
+            .textContent =
+                "Point A placed. Now place point B at gonion.";
+
+        }
+
+        else if(n === 2){
+
+            document
+            .getElementById(
+                activeSide+"Status"
+            )
+            .textContent =
+                "Point B placed. Now place point C on the inferior mandibular border.";
+
+        }
+
+        else if(n === 3){
+
+            document
+            .getElementById(
+                activeSide+"Status"
+            )
+            .textContent =
+                "All landmarks placed. Drag A, B or C to refine the measurement, then confirm.";
+
+            activeSide = null;
+
+        }
+
+
+        updateResults();
+
+        draw();
+
+    }
+);
+
+
+/* =========================
+   FIND NEAREST POINT
+========================= */
+
+function findPoint(x,y){
+
+    if(!editSide)
+        return null;
+
+
+    if(
+        confirmed[editSide]
+    )
+        return null;
+
+
+    const pts =
+        measurements[editSide];
+
+
+    for(
+        let i=0;
+        i<pts.length;
+        i++
+    ){
+
+        const dx =
+            x - pts[i].x;
+
+        const dy =
+            y - pts[i].y;
+
+
+        const distance =
+            Math.sqrt(
+                dx*dx +
+                dy*dy
+            );
+
+
+        if(
+            distance <= hitRadius
+        ){
+
+            return i;
+
+        }
+
+    }
+
+
+    return null;
+
+}
+
+
+/* =========================
+   MOUSE DOWN
+========================= */
+
+canvas.addEventListener(
+    "mousedown",
+    function(e){
+
+        if(!editSide)
+            return;
+
+
+        if(
+            confirmed[editSide]
+        )
+            return;
+
+
+        const p =
+            getCanvasCoordinates(e);
+
+
+        const index =
+            findPoint(
+                p.x,
+                p.y
+            );
+
+
+        if(index !== null){
+
+            draggedPoint =
+                index;
+
+            canvas.style.cursor =
+                "grabbing";
+
+        }
+
+    }
+);
+
+
+/* =========================
+   MOUSE MOVE
+========================= */
+
+canvas.addEventListener(
+    "mousemove",
+    function(e){
+
+        if(!editSide)
+            return;
+
+
+        const p =
+            getCanvasCoordinates(e);
+
+
+        if(
+            draggedPoint !== null
+        ){
+
+            measurements[
+                editSide
+            ][
+                draggedPoint
+            ] = {
+
+                x:p.x,
+                y:p.y
+
+            };
+
+
+            updateResults();
+
+            draw();
+
+            return;
+
+        }
+
+
+        const hit =
+            findPoint(
+                p.x,
+                p.y
+            );
+
+
+        canvas.style.cursor =
+            hit !== null
+            ? "grab"
+            : "crosshair";
+
+    }
+);
+
+
+/* =========================
+   MOUSE UP
+========================= */
+
+canvas.addEventListener(
+    "mouseup",
+    function(){
+
+        draggedPoint =
+            null;
+
+        canvas.style.cursor =
+            "crosshair";
+
+    }
+);
+
+
+canvas.addEventListener(
+    "mouseleave",
+    function(){
+
+        draggedPoint =
+            null;
+
+    }
+);
+
+
+/* =========================
+   TOUCH START
+========================= */
+
+canvas.addEventListener(
+    "touchstart",
+    function(e){
+
+        if(!editSide)
+            return;
+
+
+        if(
+            confirmed[editSide]
+        )
+            return;
+
+
+        const touch =
+            e.touches[0];
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            (touch.clientX - rect.left)
+            * canvas.width /
+            rect.width;
+
+
+        const y =
+            (touch.clientY - rect.top)
+            * canvas.height /
+            rect.height;
+
+
+        const index =
+            findPoint(x,y);
+
+
+        if(index !== null){
+
+            draggedPoint =
+                index;
+
+            e.preventDefault();
+
+        }
+
+    },
+    {passive:false}
+);
+
+
+/* =========================
+   TOUCH MOVE
+========================= */
+
+canvas.addEventListener(
+    "touchmove",
+    function(e){
+
+        if(
+            draggedPoint === null ||
+            !editSide
+        )
+            return;
+
+
+        const touch =
+            e.touches[0];
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            (touch.clientX - rect.left)
+            * canvas.width /
+            rect.width;
+
+
+        const y =
+            (touch.clientY - rect.top)
+            * canvas.height /
+            rect.height;
+
+
+        measurements[
+            editSide
+        ][
+            draggedPoint
+        ] = {
+
+            x:x,
+            y:y
+
+        };
+
+
+        updateResults();
+
+        draw();
+
+        e.preventDefault();
+
+    },
+    {passive:false}
+);
+
+
+/* =========================
+   TOUCH END
+========================= */
+
+canvas.addEventListener(
+    "touchend",
+    function(){
+
+        draggedPoint =
+            null;
+
+    }
+);
+
+
+/* =========================
+   CONFIRM
+========================= */
+
+function confirmMeasurement(side){
+
+    if(
+        measurements[side].length !== 3
+    ){
+
+        alert(
+            "Please place A, B and C before confirming."
+        );
+
+        return;
+
+    }
+
+
+    confirmed[side] = true;
+
+
+    if(
+        editSide === side
+    )
+        editSide = null;
+
+
+    if(
+        activeSide === side
+    )
+        activeSide = null;
+
+
+    document
+    .getElementById(
+        side+"Status"
+    )
+    .textContent =
+        "Measurement confirmed and locked.";
+
+
+    updateResults();
+
+    draw();
+
+}
+
+
+/* =========================
+   CLEAR SIDE
+========================= */
+
+function clearMeasurement(side){
+
+    measurements[side] = [];
+
+    confirmed[side] = false;
+
+
+    if(
+        activeSide === side
+    )
+        activeSide = null;
+
+
+    if(
+        editSide === side
+    )
+        editSide = null;
+
+
+    draggedPoint = null;
+
+
+    document
+    .getElementById(
+        side+"Angle"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        side+"Status"
+    )
+    .textContent =
+        "Ready to begin";
+
+
+    updateResults();
+
+    draw();
+
+}
+
+
+/* =========================
+   CLEAR ALL
+========================= */
+
+function clearAll(){
+
+    measurements = {
+
+        right:[],
+        left:[]
+
+    };
+
+
+    confirmed = {
+
+        right:false,
+        left:false
+
+    };
+
+
+    activeSide = null;
+
+    editSide = null;
+
+    draggedPoint = null;
+
+
+    document
+    .getElementById(
+        "rightAngle"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "leftAngle"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "rightStatus"
+    )
+    .textContent =
+        "Ready to begin";
+
+
+    document
+    .getElementById(
+        "leftStatus"
+    )
+    .textContent =
+        "Ready to begin";
+
+
+    updateResults();
+
+    draw();
+
+}
+
+
+/* =========================
+   UPDATE RESULTS
+========================= */
+
+function updateResults(){
+
+    let R = null;
+
+    let L = null;
+
+
+    if(
+        measurements.right.length === 3
+    ){
+
+        R =
+            calculateAngle(
+                measurements.right[0],
+                measurements.right[1],
+                measurements.right[2]
+            );
+
+    }
+
+
+    if(
+        measurements.left.length === 3
+    ){
+
+        L =
+            calculateAngle(
+                measurements.left[0],
+                measurements.left[1],
+                measurements.left[2]
+            );
+
+    }
+
+
+    /* TABLE */
+
+    document
+    .getElementById(
+        "tableRight"
+    )
+    .textContent =
+        R !== null
+        ? R.toFixed(2)+"°"
+        : "--";
+
+
+    document
+    .getElementById(
+        "tableLeft"
+    )
+    .textContent =
+        L !== null
+        ? L.toFixed(2)+"°"
+        : "--";
+
+
+    let mean = null;
+
+    let difference = null;
+
+
+    if(
+        R !== null &&
+        L !== null
+    ){
+
+        mean =
+            (R + L) / 2;
+
+        difference =
+            Math.abs(R - L);
+
+    }
+
+
+    document
+    .getElementById(
+        "tableMean"
+    )
+    .textContent =
+        mean !== null
+        ? mean.toFixed(2)+"°"
+        : "--";
+
+
+    document
+    .getElementById(
+        "tableDifference"
+    )
+    .textContent =
+        difference !== null
+        ? difference.toFixed(2)+"°"
+        : "--";
+
+
+    /* REPORT */
+
+    document
+    .getElementById(
+        "reportRight"
+    )
+    .textContent =
+        R !== null
+        ? R.toFixed(2)+"°"
+        : "Not measured";
+
+
+    document
+    .getElementById(
+        "reportLeft"
+    )
+    .textContent =
+        L !== null
+        ? L.toFixed(2)+"°"
+        : "Not measured";
+
+
+    document
+    .getElementById(
+        "reportMean"
+    )
+    .textContent =
+        mean !== null
+        ? mean.toFixed(2)+"°"
+        : "Not available";
+
+
+    document
+    .getElementById(
+        "reportDifference"
+    )
+    .textContent =
+        difference !== null
+        ? difference.toFixed(2)+"°"
+        : "Not available";
+
+
+    /* FORENSIC MODULE */
+
+    updateForensicProbability(
+        R,
+        L,
+        mean
+    );
+
+}
+
+
+/* ==========================================================
+   SEX + AGE FORENSIC REFERENCE MODEL
+========================================================== */
+
+function updateForensicProbability(
+    R,
+    L,
+    mean
+){
+
+    let GA = null;
+
+
+    /*
+       Prefer bilateral mean.
+       If only one side is available,
+       use that side.
+    */
+
+    if(mean !== null){
+
+        GA = mean;
+
+    }
+
+    else if(R !== null){
+
+        GA = R;
+
+    }
+
+    else if(L !== null){
+
+        GA = L;
+
+    }
+
+
+    if(GA === null){
+
+        resetForensicResults();
+
+        return;
+
+    }
+
+
+    /* ======================================================
+       SEX MODEL
+
+       Published Indian logistic model:
+
+       logit(P female)
+       =
+       4.606 - 0.038 × GA
+       ====================================================== */
+
+    const logitFemale =
+        4.606 -
+        (0.038 * GA);
+
+
+    let femaleProbability =
+        1 /
+        (
+            1 +
+            Math.exp(
+                -logitFemale
+            )
+        );
+
+
+    let maleProbability =
+        1 -
+        femaleProbability;
+
+
+    const femalePercent =
+        femaleProbability * 100;
+
+
+    const malePercent =
+        maleProbability * 100;
+
+
+    document
+    .getElementById(
+        "femaleProbability"
+    )
+    .textContent =
+        femalePercent.toFixed(1)+"%";
+
+
+    document
+    .getElementById(
+        "maleProbability"
+    )
+    .textContent =
+        malePercent.toFixed(1)+"%";
+
+
+    let sexPrediction;
+
+
+    if(
+        femalePercent >
+        malePercent
+    ){
+
+        sexPrediction =
+            "Female tendency";
+
+    }
+
+    else{
+
+        sexPrediction =
+            "Male tendency";
+
+    }
+
+
+    document
+    .getElementById(
+        "sexPrediction"
+    )
+    .textContent =
+        sexPrediction;
+
+
+    /* ======================================================
+       AGE REFERENCE ESTIMATE
+
+       IMPORTANT:
+       This is intentionally presented as an approximate
+       research reference estimate rather than a falsely
+       precise mathematical prediction.
+
+       Published OPG research has demonstrated limited
+       correlation between gonial angle and age and
+       substantial individual error.
+
+       Approximate uncertainty used:
+       ±14 years.
+       ====================================================== */
+
+    let estimatedAge;
+
+
+    if(GA < 117){
+
+        estimatedAge = 20;
+
+    }
+
+    else if(GA < 120){
+
+        estimatedAge = 23;
+
+    }
+
+    else if(GA < 123){
+
+        estimatedAge = 28;
+
+    }
+
+    else if(GA < 126){
+
+        estimatedAge = 35;
+
+    }
+
+    else if(GA < 129){
+
+        estimatedAge = 42;
+
+    }
+
+    else if(GA < 132){
+
+        estimatedAge = 50;
+
+    }
+
+    else if(GA < 135){
+
+        estimatedAge = 58;
+
+    }
+
+    else{
+
+        estimatedAge = 65;
+
+    }
+
+
+    document
+    .getElementById(
+        "estimatedAge"
+    )
+    .textContent =
+        estimatedAge+
+        " years";
+
+
+    document
+    .getElementById(
+        "ageError"
+    )
+    .textContent =
+        "Approximately ±14 years";
+
+
+    document
+    .getElementById(
+        "ageInterpretation"
+    )
+    .innerHTML =
+        '<span class="confidence-low">'+
+        'LOW-CONFIDENCE ANCILLARY ESTIMATE'+
+        '</span>';
+
+
+    /* ======================================================
+       AUTOMATED INTERPRETATION
+       ====================================================== */
+
+    let text = "";
+
+
+    text +=
+        "Based on the examiner-selected gonial angle, ";
+
+
+    if(R !== null && L !== null){
+
+        text +=
+            "the right angle is "+
+            R.toFixed(2)+
+            "°, the left angle is "+
+            L.toFixed(2)+
+            "°, and the bilateral mean is "+
+            mean.toFixed(2)+
+            "°. ";
+
+    }
+
+    else{
+
+        text +=
+            "the available gonial angle is "+
+            GA.toFixed(2)+
+            "°. ";
+
+    }
+
+
+    text +=
+        "The statistical sex reference model indicates a "+
+        sexPrediction.toLowerCase()+
+        " with an estimated female probability of "+
+        femalePercent.toFixed(1)+
+        "% and male probability of "+
+        malePercent.toFixed(1)+
+        "%. ";
+
+
+    text +=
+        "The approximate gonial-angle age reference estimate is "+
+        estimatedAge+
+        " years, with substantial uncertainty. ";
+
+
+    text +=
+        "These results should be treated as supplementary "+
+        "morphometric evidence rather than a standalone "+
+        "forensic determination.";
+
+
+    document
+    .getElementById(
+        "automatedInterpretation"
+    )
+    .textContent =
+        text;
+
+
+    /* ======================================================
+       FORENSIC CONCLUSION
+       ====================================================== */
+
+    const conclusion =
+        "The gonial-angle measurements provide supplementary "+
+        "mandibular morphometric information. The available "+
+        "statistical reference model demonstrates a "+
+        sexPrediction.toLowerCase()+
+        " based on the measured gonial angle, while the age "+
+        "estimate is of low confidence because gonial angle "+
+        "alone has limited accuracy for individual age estimation. "+
+        "The findings should be correlated with other validated "+
+        "forensic odontological and anthropological parameters.";
+
+
+    document
+    .getElementById(
+        "forensicConclusion"
+    )
+    .textContent =
+        conclusion;
+
+}
+
+
+/* =========================
+   RESET FORENSIC RESULTS
+========================= */
+
+function resetForensicResults(){
+
+    document
+    .getElementById(
+        "femaleProbability"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "maleProbability"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "sexPrediction"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "estimatedAge"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "ageError"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "ageInterpretation"
+    )
+    .textContent =
+        "--";
+
+
+    document
+    .getElementById(
+        "automatedInterpretation"
+    )
+    .textContent =
+        "No complete gonial-angle measurement is currently available.";
+
+
+    document
+    .getElementById(
+        "forensicConclusion"
+    )
+    .textContent =
+        "The forensic conclusion will be generated after measurement.";
+
+}
+
+
+/* =========================
+   INITIAL STATE
+========================= */
+
+resetForensicResults();
+
+draw();
+
+</script>
+
+</body>
+</html>
